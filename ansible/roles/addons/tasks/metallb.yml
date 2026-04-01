@@ -23,9 +23,18 @@
   delegate_to: localhost
   become: false
 
-- name: Pause for MetalLB webhook registration
-  pause:
-    seconds: 10
+- name: Wait for MetalLB webhook to register
+  kubernetes.core.k8s_info:
+    api_version: admissionregistration.k8s.io/v1
+    kind: ValidatingWebhookConfiguration
+    name: metallb-webhook-configuration
+  register: metallb_webhook_config
+  until: metallb_webhook_config.resources is defined and metallb_webhook_config.resources | length > 0
+  retries: 20
+  delay: 5
+  failed_when: false
+  delegate_to: localhost
+  become: false
 
 - name: Apply MetalLB IP pool and L2 advertisement
   kubernetes.core.k8s:

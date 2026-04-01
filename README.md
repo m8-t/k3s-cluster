@@ -180,6 +180,12 @@ kubectl get secret argocd-initial-admin-secret -n argocd \
   -o jsonpath='{.data.password}' | base64 -d
 ```
 
+After setting a permanent password, delete the initial secret:
+
+```bash
+kubectl delete secret argocd-initial-admin-secret -n argocd
+```
+
 Open `https://argocd.local` in your browser. You will get a certificate warning because the CA is self-signed. Log in with username `admin` and the password retrieved above.
 
 ## Configuration
@@ -205,13 +211,21 @@ Node counts, IPs, CPU, and memory are all defined in `tofu/variables.tf`. Overri
 
 ## Day 2 operations
 
+### Makefile targets
+
+| Target | What it does |
+|--------|-------------|
+| `make deploy` | Full one-shot deploy — runs `tofu apply` which triggers Ansible automatically |
+| `make addons` | Re-run only `addons.yml` — useful after changing addon templates or config without re-deploying VMs |
+| `make cluster` | Re-run only `site.yml` — re-fetches kubeconfig from init master |
+| `make destroy` | Tear down all VMs and infrastructure |
+
 ### Tear down and redeploy
 
 ```bash
 export TF_VAR_k3s_token=$(openssl rand -hex 32)
-cd tofu
-tofu destroy
-tofu apply
+make destroy
+make deploy
 ```
 
 ### Check VM status

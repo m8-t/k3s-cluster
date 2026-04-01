@@ -40,10 +40,18 @@
   delegate_to: localhost
   become: false
 
-# Brief pause for the webhook to register with the apiserver before creating issuers
-- name: Pause for webhook registration
-  pause:
-    seconds: 10
+- name: Wait for cert-manager webhook to register
+  kubernetes.core.k8s_info:
+    api_version: admissionregistration.k8s.io/v1
+    kind: ValidatingWebhookConfiguration
+    name: cert-manager-webhook
+  register: cm_webhook_config
+  until: cm_webhook_config.resources is defined and cm_webhook_config.resources | length > 0
+  retries: 20
+  delay: 5
+  failed_when: false
+  delegate_to: localhost
+  become: false
 
 - name: Apply self-signed ClusterIssuer
   kubernetes.core.k8s:

@@ -8,3 +8,9 @@ spec:
     service:
       annotations:
         metallb.universe.tf/loadBalancerIPs: "{{ traefik_ip }}"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 128Mi

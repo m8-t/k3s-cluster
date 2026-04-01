@@ -56,7 +56,7 @@ runcmd:
 %{ for name in master_hostnames ~}
       - "${name}"
 %{ endfor ~}
-    write-kubeconfig-mode: "0644"
+    write-kubeconfig-mode: "0600"
     disable:
       - servicelb
     disable-cloud-controller: true

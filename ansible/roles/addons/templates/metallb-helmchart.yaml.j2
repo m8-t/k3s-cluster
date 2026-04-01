@@ -9,3 +9,18 @@ spec:
   version: "{{ metallb_chart_version }}"
   targetNamespace: metallb-system
   createNamespace: true
+  valuesContent: |-
+    controller:
+      resources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+        limits:
+          memory: 64Mi
+    speaker:
+      resources:
+        requests:
+          cpu: 20m
+          memory: 32Mi
+        limits:
+          memory: 64Mi
