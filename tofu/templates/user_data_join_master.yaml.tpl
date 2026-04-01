@@ -112,6 +112,10 @@ runcmd:
             type: FileOrCreate
     KVEOF
   # Wait for the init master API before joining
-  - until curl -sk -o /dev/null -w "%%{http_code}" https://${init_master_ip}:6443/healthz | grep -qE "200|401"; do sleep 5; done
+  - |
+    ATTEMPTS=0
+    until curl -sk -o /dev/null -w "%%{http_code}" https://${init_master_ip}:6443/healthz | grep -qE "200|401"; do
+      ATTEMPTS=$((ATTEMPTS+1)); [ $ATTEMPTS -ge 60 ] && exit 1; sleep 5
+    done
   - curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${k3s_version}" sh -
   - systemctl start qemu-guest-agent

@@ -8,5 +8,18 @@
       kubeconfig: "{{ lookup('env', 'HOME') }}/.kube/k3s-config"
     kubernetes.core.k8s_info:
       kubeconfig: "{{ lookup('env', 'HOME') }}/.kube/k3s-config"
+  pre_tasks:
+    - name: Verify kubeconfig exists
+      ansible.builtin.stat:
+        path: "{{ local_kubeconfig_path }}"
+      register: kubeconfig_stat
+      delegate_to: localhost
+
+    - name: Fail if kubeconfig missing
+      ansible.builtin.fail:
+        msg: "kubeconfig not found at {{ local_kubeconfig_path }} — run site.yml first"
+      when: not kubeconfig_stat.stat.exists
+      delegate_to: localhost
+
   roles:
     - addons
