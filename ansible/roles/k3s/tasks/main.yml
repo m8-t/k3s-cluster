@@ -1,0 +1,6 @@
+---
+# Entry point — site.yml calls tasks_from directly per group,
+# this file exists as a fallback if the role is called without tasks_from.
+- name: Fail if called without specifying tasks_from
+  fail:
+    msg: "Call this role with tasks_from: init_master | join_master | join_worker"

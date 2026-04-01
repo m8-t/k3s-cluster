@@ -1,0 +1,17 @@
+# k3s config for masters joining an existing cluster
+server: "https://{{ init_master_ip }}:6443"
+token: "{{ k3s_token }}"
+
+tls-san:
+  - "{{ kube_vip_ip }}"
+{% for ip in master_ips %}
+  - "{{ ip }}"
+{% endfor %}
+{% for hostname in master_hostnames %}
+  - "{{ hostname }}"
+{% endfor %}
+
+write-kubeconfig-mode: "0644"
+
+disable:
+  - servicelb

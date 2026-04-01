@@ -1,0 +1,2 @@
+# Copy to terraform.tfvars and fill in your values
+ssh_public_key = "ssh-ed25519 AAAA... your-key-comment"

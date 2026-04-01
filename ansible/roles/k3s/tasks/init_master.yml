@@ -1,0 +1,65 @@
+---
+- name: Deploy k3s config for bootstrap master
+  template:
+    src: k3s-server-init.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    mode: "0600"
+
+- name: Install k3s (bootstrap master with embedded etcd)
+  shell: curl -sfL https://get.k3s.io | sh -
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+  args:
+    creates: /usr/local/bin/k3s
+
+- name: Wait for k3s service to become active
+  command: systemctl is-active k3s
+  register: k3s_active
+  until: k3s_active.stdout == "active"
+  retries: 30
+  delay: 10
+  changed_when: false
+
+- name: Wait for API server port to be ready
+  wait_for:
+    host: 127.0.0.1
+    port: 6443
+    timeout: 120
+
+- name: Wait for node-token file to exist
+  wait_for:
+    path: /var/lib/rancher/k3s/server/node-token
+    timeout: 60
+
+- name: Ensure local .kube directory exists
+  delegate_to: localhost
+  become: false
+  file:
+    path: "{{ lookup('env', 'HOME') }}/.kube"
+    state: directory
+    mode: "0700"
+  when: fetch_kubeconfig | bool
+
+- name: Fetch kubeconfig to local machine
+  fetch:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: "{{ local_kubeconfig_path }}"
+    flat: true
+  when: fetch_kubeconfig | bool
+
+- name: Rewrite kubeconfig server address to kube-vip VIP
+  delegate_to: localhost
+  become: false
+  replace:
+    path: "{{ local_kubeconfig_path }}"
+    regexp: 'https://127\.0\.0\.1:6443'
+    replace: "https://{{ kube_vip_ip }}:6443"
+  when: fetch_kubeconfig | bool
+
+- name: Set kubeconfig permissions
+  delegate_to: localhost
+  become: false
+  file:
+    path: "{{ local_kubeconfig_path }}"
+    mode: "0600"
+  when: fetch_kubeconfig | bool

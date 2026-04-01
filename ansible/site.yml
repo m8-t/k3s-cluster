@@ -1,0 +1,47 @@
+---
+# 1. System prerequisites on every node
+- name: Common setup
+  hosts: all
+  become: true
+  gather_facts: false
+  roles:
+    - common
+
+# 2. Bootstrap the first master — starts etcd, API server, Traefik
+- name: Initialize bootstrap master
+  hosts: k3s_init_master
+  become: true
+  gather_facts: false
+  tasks:
+    - import_role:
+        name: k3s
+        tasks_from: init_master
+
+# 3. Join the remaining two masters — one at a time to keep etcd quorum
+- name: Join additional masters
+  hosts: "k3s_masters:!k3s_init_master"
+  become: true
+  gather_facts: false
+  serial: 1
+  tasks:
+    - import_role:
+        name: k3s
+        tasks_from: join_master
+
+# 4. Deploy kube-vip on all masters for API server HA
+- name: Deploy kube-vip on masters
+  hosts: k3s_masters
+  become: true
+  gather_facts: false
+  roles:
+    - kube_vip
+
+# 5. Join all workers in parallel
+- name: Join workers
+  hosts: k3s_workers
+  become: true
+  gather_facts: false
+  tasks:
+    - import_role:
+        name: k3s
+        tasks_from: join_worker
