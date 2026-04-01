@@ -104,9 +104,15 @@ Disks are thin-provisioned qcow2 volumes backed by a shared base image.
 | kubectl | Cluster access |
 | virsh | VM management |
 
-### Ansible collections
+### Ansible collections and dependencies
 
 ```bash
+# Arch Linux
+sudo pacman -S python-kubernetes
+
+# Other distros
+pip install kubernetes
+
 cd ansible
 ansible-galaxy collection install -r requirements.yml
 ```
