@@ -7,7 +7,6 @@ tofu/terraform.tfstate.backup
 tofu/*.tfplan
 
 # Ansible
-ansible/group_vars/all.yml
 ansible/roles/*/files/*.key
 ansible/roles/*/files/*.crt
 

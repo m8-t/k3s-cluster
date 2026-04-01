@@ -115,15 +115,17 @@ ansible-galaxy collection install -r requirements.yml
 
 ### 1. Configure and apply
 
+Set your SSH public key in `terraform.tfvars`:
+
 ```bash
 cd tofu
-cp terraform.tfvars.example terraform.tfvars
+echo 'ssh_public_key = "ssh-ed25519 AAAA... your-comment"' > terraform.tfvars
 ```
 
-Edit `terraform.tfvars` and set your SSH public key:
+Generate a cluster token and export it so OpenTofu can read it:
 
-```hcl
-ssh_public_key = "ssh-ed25519 AAAA... your-comment"
+```bash
+export TF_VAR_k3s_token=$(openssl rand -hex 32)
 ```
 
 Then initialise and apply:
@@ -136,9 +138,9 @@ tofu apply
 This single command does everything:
 
 1. Downloads the Debian 13 base image and creates the libvirt network
-2. Provisions all 6 VMs with cloud-init (static IPs, SSH key, full apt upgrade)
-3. Runs `ansible-playbook site.yml` — deploys k3s HA cluster with kube-vip
-4. Runs `ansible-playbook addons.yml` — deploys cert-manager, MetalLB, and ArgoCD
+2. Provisions all 6 VMs -- cloud-init installs k3s, configures kube-vip, and joins nodes
+3. Runs `ansible-playbook site.yml` -- waits for the cluster to be Ready and fetches kubeconfig
+4. Runs `ansible-playbook addons.yml` -- deploys cert-manager, MetalLB, Traefik, and ArgoCD
 
 The kubeconfig is written to `~/.kube/k3s-config` pointing at the kube-vip VIP. At the end, `tofu output` shows all access details.
 
@@ -178,20 +180,17 @@ Open `https://argocd.local` in your browser. You will get a certificate warning 
 
 ### Cluster token
 
-`ansible/group_vars/all.yml` is excluded from version control. Copy the example and set your token:
+The token is passed to OpenTofu via the `TF_VAR_k3s_token` environment variable and baked into cloud-init at provisioning time. It is never stored in version control.
 
 ```bash
-cp ansible/group_vars/all.yml.example ansible/group_vars/all.yml
-export K3S_TOKEN=$(openssl rand -hex 32)
+export TF_VAR_k3s_token=$(openssl rand -hex 32)
 ```
-
-The token is read from the `K3S_TOKEN` environment variable at deploy time.
 
 ### Versions
 
 Versions are defined in two places:
 
-- `ansible/group_vars/all.yml` -- k3s version (`k3s_version`)
+- `tofu/variables.tf` -- k3s version (`k3s_version`) and kube-vip version (`kube_vip_version`)
 - `ansible/roles/addons/defaults/main.yml` -- cert-manager, ArgoCD, and MetalLB chart versions; MetalLB IP pool; ArgoCD IP
 
 ### VM sizing
@@ -203,12 +202,10 @@ Node counts, IPs, CPU, and memory are all defined in `tofu/variables.tf`. Overri
 ### Tear down and redeploy
 
 ```bash
+export TF_VAR_k3s_token=$(openssl rand -hex 32)
 cd tofu
 tofu destroy
 tofu apply
-cd ../ansible
-ansible-playbook site.yml
-ansible-playbook addons.yml
 ```
 
 ### Check VM status
@@ -240,5 +237,5 @@ annotations:
 
 ## Notes
 
-- The cluster token in `group_vars/all.yml` is shared across all nodes. Treat it as a secret and do not commit it to version control.
+- The cluster token is passed via `TF_VAR_k3s_token` and baked into cloud-init. It is never written to disk on the host or committed to version control.
 - The self-signed CA certificate is valid for 10 years. Import `k3s-ca-secret` from the `cert-manager` namespace into your system trust store to avoid browser warnings.

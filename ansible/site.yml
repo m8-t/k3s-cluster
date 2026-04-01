@@ -1,47 +1,44 @@
 ---
-# 1. System prerequisites on every node
-- name: Common setup
-  hosts: all
-  become: true
-  gather_facts: false
-  roles:
-    - common
+# cloud-init handles: system prereqs, k3s install, kube-vip static pod
+# This play waits for the init master to be Ready, then fetches the kubeconfig.
 
-# 2. Bootstrap the first master — starts etcd, API server, Traefik
-- name: Initialize bootstrap master
+- name: Fetch kubeconfig from init master
   hosts: k3s_init_master
-  become: true
   gather_facts: false
   tasks:
-    - import_role:
-        name: k3s
-        tasks_from: init_master
+    - name: Wait for SSH connectivity
+      wait_for_connection:
+        delay: 10
+        timeout: 600
 
-# 3. Join the remaining two masters — one at a time to keep etcd quorum
-- name: Join additional masters
-  hosts: "k3s_masters:!k3s_init_master"
-  become: true
-  gather_facts: false
-  serial: 1
-  tasks:
-    - import_role:
-        name: k3s
-        tasks_from: join_master
+    - name: Wait for k3s API server port
+      wait_for:
+        host: "{{ ansible_host }}"
+        port: 6443
+        timeout: 600
+      delegate_to: localhost
 
-# 4. Deploy kube-vip on all masters for API server HA
-- name: Deploy kube-vip on masters
-  hosts: k3s_masters
-  become: true
-  gather_facts: false
-  roles:
-    - kube_vip
+    - name: Wait for init master node to be Ready
+      command: >
+        k3s kubectl get node {{ inventory_hostname }}
+        -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
+      register: node_ready
+      until: node_ready.stdout == "True"
+      retries: 30
+      delay: 10
+      changed_when: false
 
-# 5. Join all workers in parallel
-- name: Join workers
-  hosts: k3s_workers
-  become: true
-  gather_facts: false
-  tasks:
-    - import_role:
-        name: k3s
-        tasks_from: join_worker
+    - name: Fetch kubeconfig
+      fetch:
+        src: /etc/rancher/k3s/k3s.yaml
+        dest: "{{ local_kubeconfig_path }}"
+        flat: true
+      when: fetch_kubeconfig
+
+    - name: Rewrite server address to kube-vip VIP
+      delegate_to: localhost
+      replace:
+        path: "{{ local_kubeconfig_path }}"
+        regexp: 'https://127\.0\.0\.1:6443'
+        replace: "https://{{ kube_vip_ip }}:6443"
+      when: fetch_kubeconfig

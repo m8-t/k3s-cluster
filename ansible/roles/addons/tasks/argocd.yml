@@ -1,43 +1,58 @@
 ---
-- name: Ensure argocd namespace exists
-  command: kubectl create namespace argocd --dry-run=client -o yaml
-  register: ns_yaml
-  changed_when: false
-
-- name: Apply argocd namespace
-  shell: kubectl apply -f -
-  args:
-    stdin: "{{ ns_yaml.stdout }}"
-  changed_when: true
-
 - name: Apply ArgoCD TLS certificate
-  shell: kubectl apply -f -
-  args:
-    stdin: "{{ lookup('template', 'argocd-certificate.yaml.j2') }}"
-  changed_when: true
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'argocd-certificate.yaml.j2') | from_yaml }}"
+  delegate_to: localhost
+  become: false
 
 - name: Wait for ArgoCD TLS certificate to be ready
-  command: >
-    kubectl wait certificate/{{ argocd_tls_secret }} -n argocd
-    --for=condition=Ready --timeout=120s
-  retries: 5
+  kubernetes.core.k8s_info:
+    api_version: cert-manager.io/v1
+    kind: Certificate
+    name: "{{ argocd_tls_secret }}"
+    namespace: argocd
+  register: argocd_cert
+  until: >
+    argocd_cert.resources is defined and
+    argocd_cert.resources | length > 0 and
+    argocd_cert.resources[0].status.conditions | default([])
+    | selectattr('type', 'equalto', 'Ready')
+    | selectattr('status', 'equalto', 'True')
+    | list | length > 0
+  retries: 12
   delay: 10
-  changed_when: false
+  failed_when: false
+  delegate_to: localhost
+  become: false
 
 - name: Deploy ArgoCD HelmChart
-  shell: kubectl apply -f -
-  args:
-    stdin: "{{ lookup('template', 'argocd-helmchart.yaml.j2') }}"
-  changed_when: true
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'argocd-helmchart.yaml.j2') | from_yaml }}"
+  delegate_to: localhost
+  become: false
 
 - name: Wait for ArgoCD server
-  command: kubectl rollout status deployment/argocd-server -n argocd --timeout=300s
-  retries: 10
-  delay: 15
-  changed_when: false
+  kubernetes.core.k8s_info:
+    kind: Deployment
+    name: argocd-server
+    namespace: argocd
+  register: argocd_deploy
+  until: >
+    argocd_deploy.resources is defined and
+    argocd_deploy.resources | length > 0 and
+    (argocd_deploy.resources[0].status.availableReplicas | default(0)) ==
+    argocd_deploy.resources[0].spec.replicas
+  retries: 30
+  delay: 10
+  failed_when: false
+  delegate_to: localhost
+  become: false
 
 - name: Apply ArgoCD Ingress
-  shell: kubectl apply -f -
-  args:
-    stdin: "{{ lookup('template', 'argocd-ingress.yaml.j2') }}"
-  changed_when: true
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'argocd-ingress.yaml.j2') | from_yaml }}"
+  delegate_to: localhost
+  become: false

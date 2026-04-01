@@ -17,6 +17,11 @@ locals {
     { for k, v in var.masters : k => merge(v, { role = "master" }) },
     { for k, v in var.workers : k => merge(v, { role = "worker" }) }
   )
+
+  init_master_key  = "k3s-master-1"
+  init_master_ip   = var.masters["k3s-master-1"].ip
+  master_ips       = [for k, v in var.masters : v.ip]
+  master_hostnames = sort(keys(var.masters))
 }
 
 # ── Network ───────────────────────────────────────────────────────────────────
@@ -92,10 +97,38 @@ resource "libvirt_cloudinit_disk" "vm_ci" {
 
   name = "${each.key}-ci.iso"
 
-  user_data = templatefile("${path.module}/templates/user_data.yaml.tpl", {
-    hostname       = each.key
-    ssh_public_key = var.ssh_public_key
-  })
+  user_data = (
+    each.key == local.init_master_key
+    ? templatefile("${path.module}/templates/user_data_init_master.yaml.tpl", {
+        hostname         = each.key
+        ssh_public_key   = var.ssh_public_key
+        k3s_version      = var.k3s_version
+        k3s_token        = var.k3s_token
+        kube_vip_ip      = var.kube_vip_ip
+        kube_vip_version = var.kube_vip_version
+        master_ips       = local.master_ips
+        master_hostnames = local.master_hostnames
+      })
+    : each.value.role == "master"
+    ? templatefile("${path.module}/templates/user_data_join_master.yaml.tpl", {
+        hostname         = each.key
+        ssh_public_key   = var.ssh_public_key
+        k3s_version      = var.k3s_version
+        k3s_token        = var.k3s_token
+        kube_vip_ip      = var.kube_vip_ip
+        kube_vip_version = var.kube_vip_version
+        init_master_ip   = local.init_master_ip
+        master_ips       = local.master_ips
+        master_hostnames = local.master_hostnames
+      })
+    : templatefile("${path.module}/templates/user_data_worker.yaml.tpl", {
+        hostname       = each.key
+        ssh_public_key = var.ssh_public_key
+        k3s_version    = var.k3s_version
+        k3s_token      = var.k3s_token
+        kube_vip_ip    = var.kube_vip_ip
+      })
+  )
 
   meta_data = templatefile("${path.module}/templates/meta_data.yaml.tpl", {
     hostname = each.key

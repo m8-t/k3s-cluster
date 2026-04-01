@@ -1,46 +1,12 @@
 ---
-- name: Disable k3s ServiceLB on masters
-  hosts: k3s_masters
-  become: true
-  gather_facts: false
-  serial: 1
-  tasks:
-    - name: Check if servicelb is already disabled
-      command: grep -q servicelb /etc/rancher/k3s/config.yaml
-      register: servicelb_check
-      changed_when: false
-      failed_when: false
-
-    - name: Append servicelb disable block to k3s config
-      blockinfile:
-        path: /etc/rancher/k3s/config.yaml
-        marker: "# {mark} ANSIBLE MANAGED - disable servicelb"
-        block: |
-          disable:
-            - servicelb
-      when: servicelb_check.rc != 0
-
-    - name: Restart k3s
-      systemd:
-        name: k3s
-        state: restarted
-      when: servicelb_check.rc != 0
-
-    - name: Wait for node to become Ready
-      command: >
-        kubectl get node {{ inventory_hostname }}
-        -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
-      register: node_ready
-      until: node_ready.stdout == "True"
-      retries: 30
-      delay: 10
-      changed_when: false
-      delegate_to: "{{ groups['k3s_init_master'][0] }}"
-      when: servicelb_check.rc != 0
-
 - name: Deploy cluster addons
   hosts: k3s_init_master
-  become: true
+  become: false
   gather_facts: false
+  module_defaults:
+    kubernetes.core.k8s:
+      kubeconfig: "{{ lookup('env', 'HOME') }}/.kube/k3s-config"
+    kubernetes.core.k8s_info:
+      kubeconfig: "{{ lookup('env', 'HOME') }}/.kube/k3s-config"
   roles:
     - addons
