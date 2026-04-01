@@ -1,4 +1,28 @@
 ---
+- name: Deploy ArgoCD HelmChart
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'argocd-helmchart.yaml.j2') | from_yaml }}"
+  delegate_to: localhost
+  become: false
+
+- name: Wait for ArgoCD server
+  kubernetes.core.k8s_info:
+    kind: Deployment
+    name: argocd-server
+    namespace: argocd
+  register: argocd_deploy
+  until: >
+    argocd_deploy.resources is defined and
+    argocd_deploy.resources | length > 0 and
+    (argocd_deploy.resources[0].status.availableReplicas | default(0)) ==
+    argocd_deploy.resources[0].spec.replicas
+  retries: 30
+  delay: 10
+  failed_when: false
+  delegate_to: localhost
+  become: false
+
 - name: Apply ArgoCD TLS certificate
   kubernetes.core.k8s:
     state: present
@@ -21,30 +45,6 @@
     | selectattr('status', 'equalto', 'True')
     | list | length > 0
   retries: 12
-  delay: 10
-  failed_when: false
-  delegate_to: localhost
-  become: false
-
-- name: Deploy ArgoCD HelmChart
-  kubernetes.core.k8s:
-    state: present
-    definition: "{{ lookup('template', 'argocd-helmchart.yaml.j2') | from_yaml }}"
-  delegate_to: localhost
-  become: false
-
-- name: Wait for ArgoCD server
-  kubernetes.core.k8s_info:
-    kind: Deployment
-    name: argocd-server
-    namespace: argocd
-  register: argocd_deploy
-  until: >
-    argocd_deploy.resources is defined and
-    argocd_deploy.resources | length > 0 and
-    (argocd_deploy.resources[0].status.availableReplicas | default(0)) ==
-    argocd_deploy.resources[0].spec.replicas
-  retries: 30
   delay: 10
   failed_when: false
   delegate_to: localhost

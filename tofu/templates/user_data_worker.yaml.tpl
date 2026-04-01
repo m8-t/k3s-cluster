@@ -46,6 +46,8 @@ runcmd:
     cat > /etc/rancher/k3s/config.yaml << 'EOF'
     server: "https://${kube_vip_ip}:6443"
     token: "${k3s_token}"
+    node-label:
+      - "node-role.kubernetes.io/worker=true"
     EOF
   # Wait for kube-vip VIP to be available (confirms at least one master is up and kube-vip is running)
   - until curl -sk -o /dev/null -w "%%{http_code}" https://${kube_vip_ip}:6443/healthz | grep -qE "200|401"; do sleep 5; done
