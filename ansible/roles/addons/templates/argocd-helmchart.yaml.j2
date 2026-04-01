@@ -10,5 +10,6 @@ spec:
   targetNamespace: argocd
   createNamespace: true
   valuesContent: |-
-    server:
-      insecure: true
+    configs:
+      params:
+        server.insecure: true

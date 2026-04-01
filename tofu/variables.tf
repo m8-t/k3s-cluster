@@ -45,6 +45,31 @@ variable "ssh_public_key" {
   type        = string
 }
 
+variable "k3s_token" {
+  description = "Shared cluster token — generate with: openssl rand -hex 32"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "k3s_version" {
+  description = "k3s version to install"
+  type        = string
+  default     = "v1.35.3+k3s1"
+}
+
+variable "kube_vip_ip" {
+  description = "ARP virtual IP for the k3s API server (kube-vip)"
+  type        = string
+  default     = "192.168.100.100"
+}
+
+variable "kube_vip_version" {
+  description = "kube-vip image version"
+  type        = string
+  default     = "v0.8.9"
+}
+
 variable "masters" {
   description = "Master node configurations (2 GB RAM each for etcd + API server)"
   type = map(object({

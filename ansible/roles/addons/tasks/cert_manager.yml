@@ -1,19 +1,44 @@
 ---
 - name: Deploy cert-manager HelmChart
-  shell: kubectl apply -f -
-  args:
-    stdin: "{{ lookup('template', 'cert-manager-helmchart.yaml.j2') }}"
-  changed_when: true
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'cert-manager-helmchart.yaml.j2') | from_yaml }}"
+  delegate_to: localhost
+  become: false
 
 - name: Wait for cert-manager deployment
-  command: kubectl rollout status deployment/cert-manager -n cert-manager --timeout=300s
-  retries: 10
-  delay: 15
-  changed_when: false
+  kubernetes.core.k8s_info:
+    kind: Deployment
+    name: cert-manager
+    namespace: cert-manager
+  register: cm_deploy
+  until: >
+    cm_deploy.resources is defined and
+    cm_deploy.resources | length > 0 and
+    (cm_deploy.resources[0].status.availableReplicas | default(0)) ==
+    cm_deploy.resources[0].spec.replicas
+  retries: 30
+  delay: 10
+  failed_when: false
+  delegate_to: localhost
+  become: false
 
 - name: Wait for cert-manager webhook
-  command: kubectl rollout status deployment/cert-manager-webhook -n cert-manager --timeout=120s
-  changed_when: false
+  kubernetes.core.k8s_info:
+    kind: Deployment
+    name: cert-manager-webhook
+    namespace: cert-manager
+  register: cm_webhook
+  until: >
+    cm_webhook.resources is defined and
+    cm_webhook.resources | length > 0 and
+    (cm_webhook.resources[0].status.availableReplicas | default(0)) ==
+    cm_webhook.resources[0].spec.replicas
+  retries: 20
+  delay: 10
+  failed_when: false
+  delegate_to: localhost
+  become: false
 
 # Brief pause for the webhook to register with the apiserver before creating issuers
 - name: Pause for webhook registration
@@ -21,25 +46,42 @@
     seconds: 10
 
 - name: Apply self-signed ClusterIssuer
-  shell: kubectl apply -f -
-  args:
-    stdin: "{{ lookup('template', 'selfsigned-issuer.yaml.j2') }}"
-  changed_when: true
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'selfsigned-issuer.yaml.j2') | from_yaml }}"
+  delegate_to: localhost
+  become: false
 
 - name: Apply CA Certificate
-  shell: kubectl apply -f -
-  args:
-    stdin: "{{ lookup('template', 'ca-certificate.yaml.j2') }}"
-  changed_when: true
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'ca-certificate.yaml.j2') | from_yaml }}"
+  delegate_to: localhost
+  become: false
 
 - name: Wait for CA certificate to be issued
-  command: >
-    kubectl wait certificate/k3s-ca -n cert-manager
-    --for=condition=Ready --timeout=120s
-  changed_when: false
+  kubernetes.core.k8s_info:
+    api_version: cert-manager.io/v1
+    kind: Certificate
+    name: k3s-ca
+    namespace: cert-manager
+  register: ca_cert
+  until: >
+    ca_cert.resources is defined and
+    ca_cert.resources | length > 0 and
+    ca_cert.resources[0].status.conditions | default([])
+    | selectattr('type', 'equalto', 'Ready')
+    | selectattr('status', 'equalto', 'True')
+    | list | length > 0
+  retries: 12
+  delay: 10
+  failed_when: false
+  delegate_to: localhost
+  become: false
 
 - name: Apply CA ClusterIssuer
-  shell: kubectl apply -f -
-  args:
-    stdin: "{{ lookup('template', 'ca-issuer.yaml.j2') }}"
-  changed_when: true
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'ca-issuer.yaml.j2') | from_yaml }}"
+  delegate_to: localhost
+  become: false

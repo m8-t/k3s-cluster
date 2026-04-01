@@ -1,27 +1,5 @@
-# k3s version — pin this, don't use "latest" in production
-k3s_version: "v1.35.3+k3s1"
-
-# Shared cluster token — generate with: openssl rand -hex 32
-# Copy this file to all.yml and set K3S_TOKEN in your environment, or replace the value directly.
-k3s_token: "{{ lookup('env', 'K3S_TOKEN') }}"
-
-# Bootstrap master — other nodes join through this one
-init_master_ip: "192.168.100.11"
-init_master_hostname: "k3s-master-1"
-
-# kube-vip VIP — stable API server address across all 3 masters
+# kube-vip VIP — used to rewrite the fetched kubeconfig server address
 kube_vip_ip: "192.168.100.100"
-
-# TLS SANs added to the API server cert — all master IPs, hostnames, and VIP
-master_ips:
-  - "192.168.100.11"
-  - "192.168.100.12"
-  - "192.168.100.13"
-
-master_hostnames:
-  - "k3s-master-1"
-  - "k3s-master-2"
-  - "k3s-master-3"
 
 # Fetch kubeconfig to localhost after cluster init
 fetch_kubeconfig: true

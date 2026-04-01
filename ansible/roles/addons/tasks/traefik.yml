@@ -1,16 +1,24 @@
 ---
 - name: Apply Traefik HelmChartConfig for MetalLB IP
-  shell: kubectl apply -f -
-  args:
-    stdin: "{{ lookup('template', 'traefik-config.yaml.j2') }}"
-  changed_when: true
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'traefik-config.yaml.j2') | from_yaml }}"
+  delegate_to: localhost
+  become: false
 
 - name: Wait for Traefik to get LoadBalancer IP
-  command: >
-    kubectl get svc traefik -n kube-system
-    -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
-  register: traefik_lb_ip
-  until: traefik_lb_ip.stdout == traefik_ip
+  kubernetes.core.k8s_info:
+    kind: Service
+    name: traefik
+    namespace: kube-system
+  register: traefik_svc
+  until: >
+    traefik_svc.resources is defined and
+    traefik_svc.resources | length > 0 and
+    (traefik_svc.resources[0].status.loadBalancer.ingress | default([])) | length > 0 and
+    traefik_svc.resources[0].status.loadBalancer.ingress[0].ip == traefik_ip
   retries: 30
   delay: 10
-  changed_when: false
+  failed_when: false
+  delegate_to: localhost
+  become: false
