@@ -1,0 +1,6 @@
+# kube-vip VIP — used to rewrite the fetched kubeconfig server address
+kube_vip_ip: "192.168.100.100"
+
+# Fetch kubeconfig to localhost after cluster init
+fetch_kubeconfig: true
+local_kubeconfig_path: "{{ lookup('env', 'HOME') }}/.kube/k3s-config"

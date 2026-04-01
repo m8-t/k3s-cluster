@@ -46,10 +46,9 @@ runcmd:
     cat > /etc/rancher/k3s/config.yaml << 'EOF'
     server: "https://${kube_vip_ip}:6443"
     token: "${k3s_token}"
-    node-label:
-      - "node-role.kubernetes.io/worker=true"
     EOF
   # Wait for kube-vip VIP to be available (confirms at least one master is up and kube-vip is running)
   - until curl -sk -o /dev/null -w "%%{http_code}" https://${kube_vip_ip}:6443/healthz | grep -qE "200|401"; do sleep 5; done
   - curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${k3s_version}" sh -s - agent
-  - systemctl enable --now qemu-guest-agent
+  - systemctl start k3s-agent || true
+  - systemctl start qemu-guest-agent || true
