@@ -4,6 +4,7 @@
 
 - name: Fetch kubeconfig from init master
   hosts: k3s_init_master
+  become: true
   gather_facts: false
   tasks:
     - name: Wait for SSH connectivity
