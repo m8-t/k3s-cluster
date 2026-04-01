@@ -6,16 +6,69 @@ A local k3s cluster running on KVM/libvirt VMs, provisioned with OpenTofu and co
 
 ## Architecture
 
-- 3 master nodes with embedded etcd (HA control plane)
-- 3 worker nodes
-- Traefik ingress controller (bundled with k3s)
-- cert-manager with a self-signed internal CA
-- ArgoCD with Traefik ingress and TLS
+```
+                        Host Machine (KVM/libvirt)
+                        NAT Network: 192.168.100.0/24
+┌───────────────────────────────────────────────────────────────┐
+│                                                               │
+│  ┌─────────────────────────────────────────────────────────┐  │
+│  │                  Control Plane (HA)                     │  │
+│  │                                                         │  │
+│  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐       │  │
+│  │  │ k3s-master-1│ │ k3s-master-2│ │ k3s-master-3│       │  │
+│  │  │ .11         │ │ .12         │ │ .13         │       │  │
+│  │  │ etcd        │ │ etcd        │ │ etcd        │       │  │
+│  │  │ API server  │ │ API server  │ │ API server  │       │  │
+│  │  │ kube-vip    │ │ kube-vip    │ │ kube-vip    │       │  │
+│  │  └─────────────┘ └─────────────┘ └─────────────┘       │  │
+│  │          │               │               │              │  │
+│  │          └───────────────┴───────────────┘              │  │
+│  │                    kube-vip VIP                         │  │
+│  │               192.168.100.100:6443                      │  │
+│  └─────────────────────────────────────────────────────────┘  │
+│                                                               │
+│  ┌─────────────────────────────────────────────────────────┐  │
+│  │                      Workers                            │  │
+│  │                                                         │  │
+│  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐       │  │
+│  │  │ k3s-worker-1│ │ k3s-worker-2│ │ k3s-worker-3│       │  │
+│  │  │ .21         │ │ .22         │ │ .23         │       │  │
+│  │  └─────────────┘ └─────────────┘ └─────────────┘       │  │
+│  └─────────────────────────────────────────────────────────┘  │
+│                                                               │
+│  ┌─────────────────────────────────────────────────────────┐  │
+│  │                   Addon Stack                           │  │
+│  │                                                         │  │
+│  │  MetalLB (L2)          IP pool: 192.168.100.200-220     │  │
+│  │  Traefik               LoadBalancer: 192.168.100.200    │  │
+│  │  cert-manager          self-signed CA (ca-issuer)       │  │
+│  │  ArgoCD                https://argocd.local             │  │
+│  └─────────────────────────────────────────────────────────┘  │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+
+Inbound traffic flow:
+  Browser → 192.168.100.200 (Traefik) → Ingress → Service → Pod
+  kubectl  → 192.168.100.100 (kube-vip VIP) → API server
+```
+
+### Components
+
+| Component | Role |
+|-----------|------|
+| kube-vip | ARP-based VIP for the API server — survives single master failure |
+| k3s embedded etcd | Distributed state store across all 3 masters |
+| MetalLB (L2 mode) | Assigns real IPs from the NAT subnet to LoadBalancer services |
+| Traefik | Ingress controller — single entry point for all HTTP/S traffic |
+| cert-manager | Issues TLS certificates from a self-signed internal CA |
+| ArgoCD | GitOps continuous delivery |
 
 ### Network
 
 | Role | Hostname | IP |
 |------|----------|----|
+| API server VIP (kube-vip) | — | 192.168.100.100 |
+| Ingress (Traefik / MetalLB) | — | 192.168.100.200 |
 | Master | k3s-master-1 | 192.168.100.11 |
 | Master | k3s-master-2 | 192.168.100.12 |
 | Master | k3s-master-3 | 192.168.100.13 |
@@ -23,7 +76,7 @@ A local k3s cluster running on KVM/libvirt VMs, provisioned with OpenTofu and co
 | Worker | k3s-worker-2 | 192.168.100.22 |
 | Worker | k3s-worker-3 | 192.168.100.23 |
 
-All VMs are on a NAT network (`192.168.100.0/24`, gateway `192.168.100.1`) managed by libvirt.
+All VMs are on a NAT network (`192.168.100.0/24`, gateway `192.168.100.1`) managed by libvirt. The MetalLB pool covers `192.168.100.200-220`.
 
 ### VM Sizing
 
@@ -109,7 +162,7 @@ echo 'export KUBECONFIG=~/.kube/k3s-config' >> ~/.zshrc
 Add ArgoCD to your local hosts file:
 
 ```bash
-echo "192.168.100.201  argocd.local" | sudo tee -a /etc/hosts
+echo "192.168.100.200  argocd.local" | sudo tee -a /etc/hosts
 ```
 
 Retrieve the initial admin password:
