@@ -240,6 +240,5 @@ annotations:
 
 ## Notes
 
-- VMs may kernel panic on their very first boot and auto-restart. This is a known first-boot behaviour with this image and hardware combination. The cluster comes up correctly on the second boot.
 - The cluster token in `group_vars/all.yml` is shared across all nodes. Treat it as a secret and do not commit it to version control.
 - The self-signed CA certificate is valid for 10 years. Import `k3s-ca-secret` from the `cert-manager` namespace into your system trust store to avoid browser warnings.
