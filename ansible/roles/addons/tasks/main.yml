@@ -10,6 +10,38 @@
   delegate_to: localhost
   become: false
 
+- name: Wait for worker nodes to join
+  kubernetes.core.k8s_info:
+    kind: Node
+    name: "{{ item }}"
+  register: worker_node
+  until: >
+    worker_node.resources is defined and
+    worker_node.resources | length > 0 and
+    worker_node.resources[0].status.conditions | default([])
+    | selectattr('type', 'equalto', 'Ready')
+    | selectattr('status', 'equalto', 'True')
+    | list | length > 0
+  retries: 30
+  delay: 10
+  failed_when: false
+  delegate_to: localhost
+  become: false
+  loop: "{{ groups['k3s_workers'] }}"
+
+- name: Label worker nodes
+  kubernetes.core.k8s:
+    state: patched
+    kind: Node
+    name: "{{ item }}"
+    definition:
+      metadata:
+        labels:
+          node-role.kubernetes.io/worker: "true"
+  delegate_to: localhost
+  become: false
+  loop: "{{ groups['k3s_workers'] }}"
+
 - import_tasks: cert_manager.yml
 - import_tasks: metallb.yml
 - import_tasks: traefik.yml

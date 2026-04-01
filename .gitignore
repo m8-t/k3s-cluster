@@ -4,6 +4,8 @@ tofu/.terraform.lock.hcl
 tofu/terraform.tfvars
 tofu/terraform.tfstate
 tofu/terraform.tfstate.backup
+terraform.tfstate
+terraform.tfstate.backup
 tofu/*.tfplan
 
 # Ansible
@@ -15,3 +17,5 @@ ansible/roles/*/files/*.crt
 
 # Local notes
 TODO.md
+GITOPS.md
+DECISIONS.md

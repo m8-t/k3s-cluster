@@ -114,4 +114,4 @@ runcmd:
             type: FileOrCreate
     KVEOF
   - curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${k3s_version}" sh -
-  - systemctl enable --now qemu-guest-agent
+  - systemctl start qemu-guest-agent
