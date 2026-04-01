@@ -1,0 +1,45 @@
+---
+- name: Deploy cert-manager HelmChart
+  shell: kubectl apply -f -
+  args:
+    stdin: "{{ lookup('template', 'cert-manager-helmchart.yaml.j2') }}"
+  changed_when: true
+
+- name: Wait for cert-manager deployment
+  command: kubectl rollout status deployment/cert-manager -n cert-manager --timeout=300s
+  retries: 10
+  delay: 15
+  changed_when: false
+
+- name: Wait for cert-manager webhook
+  command: kubectl rollout status deployment/cert-manager-webhook -n cert-manager --timeout=120s
+  changed_when: false
+
+# Brief pause for the webhook to register with the apiserver before creating issuers
+- name: Pause for webhook registration
+  pause:
+    seconds: 10
+
+- name: Apply self-signed ClusterIssuer
+  shell: kubectl apply -f -
+  args:
+    stdin: "{{ lookup('template', 'selfsigned-issuer.yaml.j2') }}"
+  changed_when: true
+
+- name: Apply CA Certificate
+  shell: kubectl apply -f -
+  args:
+    stdin: "{{ lookup('template', 'ca-certificate.yaml.j2') }}"
+  changed_when: true
+
+- name: Wait for CA certificate to be issued
+  command: >
+    kubectl wait certificate/k3s-ca -n cert-manager
+    --for=condition=Ready --timeout=120s
+  changed_when: false
+
+- name: Apply CA ClusterIssuer
+  shell: kubectl apply -f -
+  args:
+    stdin: "{{ lookup('template', 'ca-issuer.yaml.j2') }}"
+  changed_when: true

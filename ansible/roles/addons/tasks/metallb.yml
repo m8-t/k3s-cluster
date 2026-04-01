@@ -1,0 +1,22 @@
+---
+- name: Deploy MetalLB HelmChart
+  shell: kubectl apply -f -
+  args:
+    stdin: "{{ lookup('template', 'metallb-helmchart.yaml.j2') }}"
+  changed_when: true
+
+- name: Wait for MetalLB controller
+  command: kubectl rollout status deployment/metallb-controller -n metallb-system --timeout=300s
+  retries: 10
+  delay: 15
+  changed_when: false
+
+- name: Pause for MetalLB webhook registration
+  pause:
+    seconds: 10
+
+- name: Apply MetalLB IP pool and L2 advertisement
+  shell: kubectl apply -f -
+  args:
+    stdin: "{{ lookup('template', 'metallb-config.yaml.j2') }}"
+  changed_when: true
