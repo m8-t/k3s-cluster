@@ -5,9 +5,9 @@ variable "libvirt_uri" {
 }
 
 variable "base_image_url" {
-  description = "URL to Debian 12 (Bookworm) genericcloud qcow2 image"
+  description = "URL to openSUSE MicroOS OpenStack Cloud qcow2 image"
   type        = string
-  default     = "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-amd64.qcow2"
+  default     = "https://download.opensuse.org/tumbleweed/appliances/openSUSE-MicroOS.x86_64-OpenStack-Cloud.qcow2"
 }
 
 variable "storage_pool" {

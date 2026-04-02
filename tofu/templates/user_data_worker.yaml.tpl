@@ -4,22 +4,18 @@ fqdn: ${hostname}.local
 manage_etc_hosts: true
 
 users:
-  - name: debian
-    gecos: Debian User
+  - name: opensuse
+    gecos: openSUSE User
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/bash
     lock_passwd: true
     ssh_authorized_keys:
       - ${ssh_public_key}
 
-packages:
-  - curl
-  - ca-certificates
-
-package_update: true
-package_upgrade: true
-
 bootcmd:
+  - systemctl mask health-checker.service || true
+  - systemctl daemon-reload
+  - systemctl start --no-block cloud-final.service || true
   - modprobe br_netfilter
   - modprobe overlay
 
@@ -37,6 +33,8 @@ write_files:
       net.ipv6.conf.all.forwarding = 1
 
 runcmd:
+  - sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/' /etc/default/grub
+  - grub2-mkconfig -o /boot/grub2/grub.cfg
   - sysctl --system
   - swapoff -a
   - sed -i '/\sswap\s/d' /etc/fstab

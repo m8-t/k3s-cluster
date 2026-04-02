@@ -49,7 +49,7 @@ resource "libvirt_network" "k3s_net" {
 # ── Base image (downloaded once, shared as backing file) ──────────────────────
 
 resource "libvirt_volume" "base_image" {
-  name = "debian-13-k3s-base.qcow2"
+  name = "microos-k3s-base.qcow2"
   pool = var.storage_pool
 
   create = {
