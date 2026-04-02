@@ -1,14 +1,12 @@
 version: 2
 ethernets:
-  id0:
-    match:
-      driver: virtio_net
+  enp0s3:
     dhcp4: false
     dhcp6: false
     addresses:
       - ${ip_address}/24
     routes:
-      - to: default
+      - to: 0.0.0.0/0
         via: ${gateway}
     nameservers:
       addresses:

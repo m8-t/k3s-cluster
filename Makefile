@@ -2,7 +2,7 @@
 
 # Full one-shot deploy (same as tofu apply — null_resource runs Ansible automatically)
 deploy:
-	cd tofu && tofu apply
+	TF_VAR_k3s_token=$$(openssl rand -hex 32) tofu -chdir=tofu apply
 
 # Re-run only Ansible site.yml (fetch kubeconfig)
 cluster:

@@ -20,13 +20,14 @@
 
     - name: Wait for init master node to be Ready
       command: >
-        k3s kubectl get node {{ inventory_hostname }}
-        -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
+        /usr/local/bin/k3s kubectl wait node/{{ inventory_hostname }}
+        --for=condition=Ready --timeout=10s
       register: node_ready
-      until: node_ready.stdout == "True"
+      until: node_ready.rc == 0
       retries: 30
       delay: 10
       changed_when: false
+      failed_when: false
       become: true
 
     - name: Fetch kubeconfig

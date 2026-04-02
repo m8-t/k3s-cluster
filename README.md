@@ -128,22 +128,18 @@ cd tofu
 echo 'ssh_public_key = "ssh-ed25519 AAAA... your-comment"' > terraform.tfvars
 ```
 
-Generate a cluster token and export it so OpenTofu can read it:
-
-```bash
-export TF_VAR_k3s_token=$(openssl rand -hex 32)
-```
-
-Then initialise and apply:
+Generate a cluster token and export it so OpenTofu can read it, then initialise and apply:
 
 ```bash
 tofu init
-tofu apply
+make deploy
 ```
+
+`make deploy` generates a fresh token automatically and passes it to tofu inline.
 
 This single command does everything:
 
-1. Downloads the Debian 13 base image and creates the libvirt network
+1. Downloads the openSUSE MicroOS base image and creates the libvirt network
 2. Provisions all 6 VMs -- cloud-init installs k3s, configures kube-vip, and joins nodes
 3. Runs `ansible-playbook site.yml` -- waits for the cluster to be Ready and fetches kubeconfig
 4. Runs `ansible-playbook addons.yml` -- deploys cert-manager, MetalLB, Traefik, and ArgoCD
@@ -192,11 +188,7 @@ Open `https://argocd.local` in your browser. You will get a certificate warning 
 
 ### Cluster token
 
-The token is passed to OpenTofu via the `TF_VAR_k3s_token` environment variable and baked into cloud-init at provisioning time. It is never stored in version control.
-
-```bash
-export TF_VAR_k3s_token=$(openssl rand -hex 32)
-```
+`make deploy` generates a fresh token automatically via `openssl rand -hex 32` and passes it inline to tofu. The token is never stored in version control or on disk.
 
 ### Versions
 
@@ -223,7 +215,6 @@ Node counts, IPs, CPU, and memory are all defined in `tofu/variables.tf`. Overri
 ### Tear down and redeploy
 
 ```bash
-export TF_VAR_k3s_token=$(openssl rand -hex 32)
 make destroy
 make deploy
 ```
@@ -243,7 +234,7 @@ virsh -c qemu:///system start k3s-master-1
 ### SSH into a node
 
 ```bash
-ssh -i ~/.ssh/id_ed25519 debian@192.168.100.11
+ssh -i ~/.ssh/id_ed25519 opensuse@192.168.100.11
 ```
 
 ### Issuing certificates for other services
@@ -257,5 +248,6 @@ annotations:
 
 ## Notes
 
-- The cluster token is passed via `TF_VAR_k3s_token` and baked into cloud-init. It is never written to disk on the host or committed to version control.
+- The cluster token is generated fresh on each `make deploy` and passed inline to tofu. It is never written to disk on the host or committed to version control.
+- Nodes run openSUSE MicroOS (immutable root filesystem). OS-level updates are handled via `transactional-update`; k3s upgrades are managed by system-upgrade-controller.
 - The self-signed CA certificate is valid for 10 years. Import `k3s-ca-secret` from the `cert-manager` namespace into your system trust store to avoid browser warnings.
