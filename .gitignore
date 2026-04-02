@@ -13,9 +13,3 @@ ansible/roles/*/files/*.crt
 # Kubeconfig
 *.kubeconfig
 
-# Local notes
-TODO.md
-GITOPS.md
-DECISIONS.md
-REVIEW.md
-SESSION_NOTES.md
