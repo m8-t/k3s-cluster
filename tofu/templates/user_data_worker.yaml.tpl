@@ -13,7 +13,6 @@ users:
       - ${ssh_public_key}
 
 packages:
-  - qemu-guest-agent
   - curl
   - ca-certificates
 
@@ -51,4 +50,3 @@ runcmd:
   - until curl -sk -o /dev/null -w "%%{http_code}" https://${kube_vip_ip}:6443/healthz | grep -qE "200|401"; do sleep 5; done
   - curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${k3s_version}" sh -s - agent
   - systemctl start k3s-agent || true
-  - systemctl start qemu-guest-agent || true
