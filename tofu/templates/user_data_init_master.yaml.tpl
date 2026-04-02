@@ -13,7 +13,6 @@ users:
       - ${ssh_public_key}
 
 packages:
-  - qemu-guest-agent
   - curl
   - ca-certificates
 
@@ -25,8 +24,54 @@ package_upgrade: true
 bootcmd:
   - modprobe br_netfilter
   - modprobe overlay
+  - mkdir -p /var/lib/rancher/k3s/server/manifests
 
 write_files:
+  - path: /etc/profile.d/aliases.sh
+    content: |
+      alias k='kubectl'
+
+  - path: /var/lib/rancher/k3s/server/manifests/upgrade-plans.yaml
+    content: |
+      apiVersion: upgrade.cattle.io/v1
+      kind: Plan
+      metadata:
+        name: server-plan
+        namespace: system-upgrade
+      spec:
+        concurrency: 1
+        cordon: true
+        nodeSelector:
+          matchExpressions:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+        serviceAccountName: system-upgrade
+        upgrade:
+          image: rancher/k3s-upgrade
+        channel: https://update.k3s.io/v1-release/channels/latest
+      ---
+      apiVersion: upgrade.cattle.io/v1
+      kind: Plan
+      metadata:
+        name: agent-plan
+        namespace: system-upgrade
+      spec:
+        concurrency: 1
+        cordon: true
+        nodeSelector:
+          matchExpressions:
+            - key: node-role.kubernetes.io/worker
+              operator: Exists
+        prepare:
+          image: rancher/k3s-upgrade
+          args:
+            - prepare
+            - server-plan
+        serviceAccountName: system-upgrade
+        upgrade:
+          image: rancher/k3s-upgrade
+        channel: https://update.k3s.io/v1-release/channels/latest
+
   - path: /etc/modules-load.d/k3s.conf
     content: |
       br_netfilter
@@ -113,5 +158,5 @@ runcmd:
             path: /etc/rancher/k3s/k3s.yaml
             type: FileOrCreate
     KVEOF
-  - curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${k3s_version}" sh -
-  - systemctl start qemu-guest-agent
+  - curl -sfL "https://github.com/rancher/system-upgrade-controller/releases/download/${suc_version}/system-upgrade-controller.yaml" -o /var/lib/rancher/k3s/server/manifests/system-upgrade-controller.yaml
+  - curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${k3s_version}" INSTALL_K3S_EXEC="--cluster-init --write-kubeconfig-mode=0644" sh -

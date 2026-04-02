@@ -70,6 +70,12 @@ variable "kube_vip_version" {
   default     = "v0.8.9"
 }
 
+variable "suc_version" {
+  description = "system-upgrade-controller version"
+  type        = string
+  default     = "v0.19.0"
+}
+
 variable "masters" {
   description = "Master node configurations (2 GB RAM each for etcd + API server)"
   type = map(object({
