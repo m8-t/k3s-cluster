@@ -13,7 +13,6 @@ users:
       - ${ssh_public_key}
 
 packages:
-  - qemu-guest-agent
   - curl
   - ca-certificates
 
@@ -25,6 +24,10 @@ bootcmd:
   - modprobe overlay
 
 write_files:
+  - path: /etc/profile.d/aliases.sh
+    content: |
+      alias k='kubectl'
+
   - path: /etc/modules-load.d/k3s.conf
     content: |
       br_netfilter
@@ -117,5 +120,4 @@ runcmd:
     until curl -sk -o /dev/null -w "%%{http_code}" https://${init_master_ip}:6443/healthz | grep -qE "200|401"; do
       ATTEMPTS=$((ATTEMPTS+1)); [ $ATTEMPTS -ge 60 ] && exit 1; sleep 5
     done
-  - curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${k3s_version}" sh -
-  - systemctl start qemu-guest-agent
+  - curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="${k3s_version}" INSTALL_K3S_EXEC="server --write-kubeconfig-mode=0644" sh -

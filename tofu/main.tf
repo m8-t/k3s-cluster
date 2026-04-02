@@ -106,6 +106,7 @@ resource "libvirt_cloudinit_disk" "vm_ci" {
         k3s_token        = var.k3s_token
         kube_vip_ip      = var.kube_vip_ip
         kube_vip_version = var.kube_vip_version
+        suc_version      = var.suc_version
         master_ips       = local.master_ips
         master_hostnames = local.master_hostnames
       })
