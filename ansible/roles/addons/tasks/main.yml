@@ -46,3 +46,4 @@
 - import_tasks: metallb.yml
 - import_tasks: traefik.yml
 - import_tasks: argocd.yml
+- import_tasks: system_upgrade_controller.yml
