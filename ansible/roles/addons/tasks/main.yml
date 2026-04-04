@@ -42,7 +42,14 @@
   become: false
   loop: "{{ groups['k3s_workers'] }}"
 
-- import_tasks: cert_manager.yml
-- import_tasks: metallb.yml
-- import_tasks: traefik.yml
-- import_tasks: argocd.yml
+- name: Import cert-manager tasks
+  ansible.builtin.import_tasks: cert_manager.yml
+
+- name: Import metallb tasks
+  ansible.builtin.import_tasks: metallb.yml
+
+- name: Import traefik tasks
+  ansible.builtin.import_tasks: traefik.yml
+
+- name: Import argocd tasks
+  ansible.builtin.import_tasks: argocd.yml
