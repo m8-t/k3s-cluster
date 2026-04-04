@@ -19,7 +19,6 @@
     cm_deploy.resources[0].spec.replicas
   retries: 30
   delay: 10
-  failed_when: false
   delegate_to: localhost
   become: false
 
@@ -36,7 +35,6 @@
     cm_webhook.resources[0].spec.replicas
   retries: 20
   delay: 10
-  failed_when: false
   delegate_to: localhost
   become: false
 
@@ -49,7 +47,6 @@
   until: cm_webhook_config.resources is defined and cm_webhook_config.resources | length > 0
   retries: 20
   delay: 5
-  failed_when: false
   delegate_to: localhost
   become: false
 
@@ -83,7 +80,6 @@
     | list | length > 0
   retries: 12
   delay: 10
-  failed_when: false
   delegate_to: localhost
   become: false
 

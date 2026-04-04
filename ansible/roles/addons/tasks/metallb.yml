@@ -19,7 +19,6 @@
     metallb_deploy.resources[0].spec.replicas
   retries: 30
   delay: 10
-  failed_when: false
   delegate_to: localhost
   become: false
 
@@ -32,7 +31,6 @@
   until: metallb_webhook_config.resources is defined and metallb_webhook_config.resources | length > 0
   retries: 20
   delay: 5
-  failed_when: false
   delegate_to: localhost
   become: false
 
