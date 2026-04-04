@@ -22,16 +22,6 @@ variable "network_name" {
   default     = "k3s-net"
 }
 
-variable "network_cidr" {
-  description = "CIDR for the k3s NAT network"
-  type        = string
-  default     = "192.168.100.0/24"
-
-  validation {
-    condition     = can(cidrhost(var.network_cidr, 0))
-    error_message = "network_cidr must be a valid CIDR block (e.g., 192.168.100.0/24)."
-  }
-}
 
 variable "gateway" {
   description = "Gateway IP for the k3s network"
