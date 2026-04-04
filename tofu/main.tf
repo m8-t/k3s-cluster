@@ -4,6 +4,10 @@ terraform {
       source  = "dmacvicar/libvirt"
       version = "~> 0.9"
     }
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.0"
+    }
   }
   required_version = ">= 1.6.0"
 }
@@ -100,35 +104,35 @@ resource "libvirt_cloudinit_disk" "vm_ci" {
   user_data = (
     each.key == local.init_master_key
     ? templatefile("${path.module}/templates/user_data_init_master.yaml.tpl", {
-        hostname         = each.key
-        ssh_public_key   = var.ssh_public_key
-        k3s_version      = var.k3s_version
-        k3s_token        = var.k3s_token
-        kube_vip_ip      = var.kube_vip_ip
-        kube_vip_version = var.kube_vip_version
-        suc_version      = var.suc_version
-        master_ips       = local.master_ips
-        master_hostnames = local.master_hostnames
-      })
+      hostname         = each.key
+      ssh_public_key   = var.ssh_public_key
+      k3s_version      = var.k3s_version
+      k3s_token        = var.k3s_token
+      kube_vip_ip      = var.kube_vip_ip
+      kube_vip_version = var.kube_vip_version
+      suc_version      = var.suc_version
+      master_ips       = local.master_ips
+      master_hostnames = local.master_hostnames
+    })
     : each.value.role == "master"
     ? templatefile("${path.module}/templates/user_data_join_master.yaml.tpl", {
-        hostname         = each.key
-        ssh_public_key   = var.ssh_public_key
-        k3s_version      = var.k3s_version
-        k3s_token        = var.k3s_token
-        kube_vip_ip      = var.kube_vip_ip
-        kube_vip_version = var.kube_vip_version
-        init_master_ip   = local.init_master_ip
-        master_ips       = local.master_ips
-        master_hostnames = local.master_hostnames
-      })
+      hostname         = each.key
+      ssh_public_key   = var.ssh_public_key
+      k3s_version      = var.k3s_version
+      k3s_token        = var.k3s_token
+      kube_vip_ip      = var.kube_vip_ip
+      kube_vip_version = var.kube_vip_version
+      init_master_ip   = local.init_master_ip
+      master_ips       = local.master_ips
+      master_hostnames = local.master_hostnames
+    })
     : templatefile("${path.module}/templates/user_data_worker.yaml.tpl", {
-        hostname       = each.key
-        ssh_public_key = var.ssh_public_key
-        k3s_version    = var.k3s_version
-        k3s_token      = var.k3s_token
-        kube_vip_ip    = var.kube_vip_ip
-      })
+      hostname       = each.key
+      ssh_public_key = var.ssh_public_key
+      k3s_version    = var.k3s_version
+      k3s_token      = var.k3s_token
+      kube_vip_ip    = var.kube_vip_ip
+    })
   )
 
   meta_data = templatefile("${path.module}/templates/meta_data.yaml.tpl", {

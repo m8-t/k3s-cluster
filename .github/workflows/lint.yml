@@ -8,7 +8,26 @@ on:
       - main
 
 jobs:
-  lint:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      ansible: ${{ steps.filter.outputs.ansible }}
+      tofu: ${{ steps.filter.outputs.tofu }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            ansible:
+              - 'ansible/**'
+            tofu:
+              - 'tofu/**'
+
+  ansible-lint:
+    needs: changes
+    if: needs.changes.outputs.ansible == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,3 +48,34 @@ jobs:
 
       - name: Run ansible-lint
         run: ansible-lint ansible/
+
+  tofu-lint:
+    needs: changes
+    if: needs.changes.outputs.tofu == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install libvirt (required by provider binary)
+        run: sudo apt-get install -y libvirt-dev
+
+      - name: Set up OpenTofu
+        uses: opentofu/setup-opentofu@v1
+
+      - name: Init (download providers, skip backend)
+        run: tofu init -backend=false
+        working-directory: tofu
+
+      - name: Check formatting
+        run: tofu fmt -check -recursive
+        working-directory: tofu
+
+      - name: Validate
+        run: tofu validate
+        working-directory: tofu
+
+      - name: Set up tflint
+        uses: terraform-linters/setup-tflint@v4
+
+      - name: Run tflint
+        run: tflint --chdir=tofu
