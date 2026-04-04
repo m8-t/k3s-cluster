@@ -37,7 +37,7 @@ write_files:
       net.ipv6.conf.all.forwarding = 1
 
 runcmd:
-  - sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/' /etc/default/grub
+  - '[ -f /etc/default/grub ] && sed -i ''s/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/'' /etc/default/grub || true'
   - grub2-mkconfig -o /boot/grub2/grub.cfg
   - sysctl --system
   - swapoff -a
@@ -63,6 +63,7 @@ runcmd:
   - mkdir -p /var/lib/rancher/k3s/agent/pod-manifests
   - |
     IFACE=$(ip route get ${kube_vip_ip} | awk '{for(i=1;i<=NF;i++) if($i=="dev") print $(i+1)}' | head -1)
+    [ -z "$IFACE" ] && { echo "ERROR: could not determine network interface for kube-vip VIP ${kube_vip_ip}"; exit 1; }
     cat > /var/lib/rancher/k3s/agent/pod-manifests/kube-vip.yaml << KVEOF
     apiVersion: v1
     kind: Pod

@@ -19,7 +19,6 @@
     argocd_deploy.resources[0].spec.replicas
   retries: 30
   delay: 10
-  failed_when: false
   delegate_to: localhost
   become: false
 
@@ -46,7 +45,6 @@
     | list | length > 0
   retries: 12
   delay: 10
-  failed_when: false
   delegate_to: localhost
   become: false
 

@@ -26,12 +26,22 @@ variable "network_cidr" {
   description = "CIDR for the k3s NAT network"
   type        = string
   default     = "192.168.100.0/24"
+
+  validation {
+    condition     = can(cidrhost(var.network_cidr, 0))
+    error_message = "network_cidr must be a valid CIDR block (e.g., 192.168.100.0/24)."
+  }
 }
 
 variable "gateway" {
   description = "Gateway IP for the k3s network"
   type        = string
   default     = "192.168.100.1"
+
+  validation {
+    condition     = can(regex("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$", var.gateway))
+    error_message = "gateway must be a valid IPv4 address."
+  }
 }
 
 variable "dns_servers" {
@@ -62,6 +72,11 @@ variable "kube_vip_ip" {
   description = "ARP virtual IP for the k3s API server (kube-vip)"
   type        = string
   default     = "192.168.100.100"
+
+  validation {
+    condition     = can(regex("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$", var.kube_vip_ip))
+    error_message = "kube_vip_ip must be a valid IPv4 address."
+  }
 }
 
 variable "kube_vip_version" {

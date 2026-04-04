@@ -19,6 +19,5 @@
     traefik_svc.resources[0].status.loadBalancer.ingress[0].ip == traefik_ip
   retries: 30
   delay: 10
-  failed_when: false
   delegate_to: localhost
   become: false
