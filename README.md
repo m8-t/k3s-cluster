@@ -6,7 +6,7 @@ A local k3s cluster running on KVM/libvirt VMs, provisioned with OpenTofu and co
 
 ## Architecture
 
-```
+```text
                         Host Machine (KVM/libvirt)
                         NAT Network: 192.168.100.0/24
 ┌───────────────────────────────────────────────────────────────┐
@@ -236,6 +236,31 @@ virsh -c qemu:///system start k3s-master-1
 ```bash
 ssh -i ~/.ssh/id_ed25519 opensuse@192.168.100.11
 ```
+
+### Upgrades
+
+Two independent upgrade paths are managed by [system-upgrade-controller](https://github.com/rancher/system-upgrade-controller), which is deployed automatically on first boot via cloud-init.
+
+#### k3s (automatic)
+
+Two SUC plans (`server-plan`, `agent-plan`) track the k3s `latest` release channel. Masters are upgraded one at a time; workers wait for all masters to finish.
+
+No manual action required -- SUC will roll out new k3s versions automatically as they are published.
+
+#### MicroOS OS packages (manual trigger)
+
+Two SUC plans (`microos-server`, `microos-agent`) run `transactional-update --continue cleanup dup` on each node and reboot if needed. Workers wait for all masters to finish.
+
+These plans do **not** trigger automatically. Annotate all nodes when you want to roll out OS updates:
+
+```bash
+kubectl annotate node \
+  k3s-master-1 k3s-master-2 k3s-master-3 \
+  k3s-worker-1 k3s-worker-2 k3s-worker-3 \
+  plan.upgrade.cattle.io/microos=microos
+```
+
+SUC will drain each node, run the update, reboot if needed, and uncordon before moving to the next.
 
 ### Issuing certificates for other services
 

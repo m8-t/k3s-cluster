@@ -67,6 +67,70 @@ write_files:
         upgrade:
           image: rancher/k3s-upgrade
         channel: https://update.k3s.io/v1-release/channels/latest
+      ---
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: microos
+        namespace: system-upgrade
+      type: Opaque
+      stringData:
+        upgrade.sh: |
+          #!/bin/sh
+          set -e
+          transactional-update --continue cleanup dup
+          [ -f /run/reboot-needed ] && rebootmgrctl reboot now
+      ---
+      apiVersion: upgrade.cattle.io/v1
+      kind: Plan
+      metadata:
+        name: microos-server
+        namespace: system-upgrade
+      spec:
+        concurrency: 1
+        nodeSelector:
+          matchExpressions:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+        serviceAccountName: system-upgrade
+        secrets:
+          - name: microos
+            path: /host/run/system-upgrade/secrets/microos
+        drain:
+          force: true
+        version: microos
+        upgrade:
+          image: registry.opensuse.org/opensuse/tumbleweed:latest
+          command: ["chroot", "/host"]
+          args: ["sh", "/run/system-upgrade/secrets/microos/upgrade.sh"]
+      ---
+      apiVersion: upgrade.cattle.io/v1
+      kind: Plan
+      metadata:
+        name: microos-agent
+        namespace: system-upgrade
+      spec:
+        concurrency: 2
+        nodeSelector:
+          matchExpressions:
+            - key: node-role.kubernetes.io/worker
+              operator: Exists
+        prepare:
+          image: rancher/k3s-upgrade
+          args:
+            - prepare
+            - microos-server
+        serviceAccountName: system-upgrade
+        secrets:
+          - name: microos
+            path: /host/run/system-upgrade/secrets/microos
+        drain:
+          force: true
+        version: microos
+        upgrade:
+          image: registry.opensuse.org/opensuse/tumbleweed:latest
+          command: ["chroot", "/host"]
+          args: ["sh", "/run/system-upgrade/secrets/microos/upgrade.sh"]
 
   - path: /etc/modules-load.d/k3s.conf
     content: |

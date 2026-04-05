@@ -1,0 +1,6 @@
+---
+default: true
+# Line length is impractical to enforce in READMEs with URLs and prose
+MD013: false
+# Table pipe alignment style is a renderer concern, not a correctness issue
+MD060: false
