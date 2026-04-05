@@ -42,6 +42,9 @@
   become: false
   loop: "{{ groups['k3s_workers'] }}"
 
+- name: Import system-upgrade-controller tasks
+  ansible.builtin.import_tasks: system_upgrade_controller.yml
+
 - name: Import cert-manager tasks
   ansible.builtin.import_tasks: cert_manager.yml
 

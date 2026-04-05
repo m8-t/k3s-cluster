@@ -1,0 +1,39 @@
+---
+- name: Wait for system-upgrade-controller deployment to exist
+  kubernetes.core.k8s_info:
+    kind: Deployment
+    name: system-upgrade-controller
+    namespace: system-upgrade
+  register: suc_deploy
+  until: suc_deploy.resources is defined and suc_deploy.resources | length > 0
+  retries: 30
+  delay: 10
+  delegate_to: localhost
+  become: false
+
+- name: Patch system-upgrade-controller to mount host CA bundle
+  kubernetes.core.k8s:
+    state: patched
+    kind: Deployment
+    name: system-upgrade-controller
+    namespace: system-upgrade
+    definition:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: system-upgrade-controller
+                env:
+                  - name: SSL_CERT_FILE
+                    value: /etc/ssl/ca-bundle.pem
+                volumeMounts:
+                  - name: host-ca-bundle
+                    mountPath: /etc/ssl/ca-bundle.pem
+                    readOnly: true
+            volumes:
+              - name: host-ca-bundle
+                hostPath:
+                  path: /etc/ssl/ca-bundle.pem
+                  type: File
+  delegate_to: localhost
+  become: false
