@@ -79,7 +79,7 @@ write_files:
           #!/bin/sh
           set -e
           transactional-update --continue cleanup dup
-          [ -f /run/reboot-needed ] && rebootmgrctl reboot now
+          [ -f /run/reboot-needed ] && rebootmgrctl reboot now || true
       ---
       apiVersion: upgrade.cattle.io/v1
       kind: Plan
@@ -115,11 +115,6 @@ write_files:
           matchExpressions:
             - key: node-role.kubernetes.io/worker
               operator: Exists
-        prepare:
-          image: rancher/k3s-upgrade
-          args:
-            - prepare
-            - microos-server
         serviceAccountName: system-upgrade
         secrets:
           - name: microos
