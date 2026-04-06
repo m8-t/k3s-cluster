@@ -2,7 +2,7 @@
 
 # Full one-shot deploy (same as tofu apply — null_resource runs Ansible automatically)
 deploy:
-	TF_VAR_k3s_token=$$(openssl rand -hex 32) tofu -chdir=tofu apply
+	TF_VAR_k3s_token=$$(python3 -c "import secrets; print(secrets.token_hex(32))") tofu -chdir=tofu apply -auto-approve
 
 # Re-run only Ansible site.yml (fetch kubeconfig)
 cluster:
@@ -13,4 +13,4 @@ addons:
 	cd ansible && ansible-playbook addons.yml
 
 destroy:
-	cd tofu && tofu destroy
+	tofu -chdir=tofu destroy -auto-approve
